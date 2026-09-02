@@ -32,6 +32,7 @@ export interface PlaceDefectInput {
   product_id: string
   x: number
   y: number
+  z: number
   defect_type: DefectType
   severity?: Severity | null
   note?: string | null
@@ -50,6 +51,7 @@ export async function placeDefect(input: PlaceDefectInput): Promise<Defect> {
       product_id: input.product_id,
       x: input.x,
       y: input.y,
+      z: input.z,
       defect_type: input.defect_type,
       severity: input.severity ?? null,
       note: input.note ?? null,
@@ -71,7 +73,7 @@ export async function placeDefect(input: PlaceDefectInput): Promise<Defect> {
 export async function placeDefectViaAgent(input: PlaceDefectInput): Promise<Defect> {
   window.dispatchEvent(
     new CustomEvent('agent-target', {
-      detail: { x: input.x, y: input.y, productId: input.product_id },
+      detail: { x: input.x, y: input.y, z: input.z, productId: input.product_id },
     }),
   )
   await new Promise((resolve) => setTimeout(resolve, 900))

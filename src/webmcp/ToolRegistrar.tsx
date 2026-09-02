@@ -8,7 +8,12 @@ import {
   suggestClassification,
   updateDefect,
 } from '../lib/defects'
-import { DEFECT_TYPES } from '../lib/types'
+import { CAR_ZONES, DEFECT_TYPES } from '../lib/types'
+
+const ZONE_NAMES = Object.keys(CAR_ZONES)
+const ZONE_HINT = Object.entries(CAR_ZONES)
+  .map(([name, [x, y, z]]) => `${name}=(${x},${y},${z})`)
+  .join(', ')
 
 /**
  * Mounted once at the app root in App.tsx and NEVER conditionally unmounted -
@@ -21,10 +26,11 @@ export function ToolRegistrar() {
   useWebMCP({
     name: 'get_product_diagram',
     description:
-      'Get the diagram image URL and pixel dimensions (diagram_width, diagram_height) for a product. ' +
-      'Call this FIRST before log_defect so you know the coordinate system: x/y for a defect must be ' +
-      'in the same pixel space as diagram_width/diagram_height, measured from the top-left corner of ' +
-      'the diagram image (0,0 = top-left, x increases right, y increases down).',
+      'Get the 3D model reference and bounding-box dimensions (diagram_width=length, diagram_height=' +
+      'height, diagram_depth=width) for a car unit. Call this FIRST before log_defect so you know the ' +
+      'coordinate system: x/y/z for a defect must be a world point on the car\'s surface, measured from ' +
+      'a fixed corner of its bounding box (0,0,0), x toward the front, y upward, z toward the driver side, ' +
+      'each within 0..diagram_width / 0..diagram_height / 0..diagram_depth respectively.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -43,31 +49,41 @@ export function ToolRegistrar() {
   useWebMCP({
     name: 'log_defect',
     description:
-      'Place a defect tag at exact pixel coordinates (x, y) on a product diagram - this is the SAME ' +
-      'action a human performs by dragging a tag onto the diagram; it triggers the same drop animation. ' +
-      'x and y must be in the diagram\'s natural pixel space, top-left origin (call get_product_diagram ' +
-      'first to learn diagram_width/diagram_height and estimate a position within that space). ' +
-      'Choose severity by asking: does this defect affect FUNCTION (high), is it APPEARANCE-only (low), ' +
-      'or is it borderline/unclear (medium)? If you cannot tell what the defect actually is from the ' +
-      'description, use defect_type "unknown" and leave severity unset - a human will classify it, or ' +
-      'call suggest_classification once you have more information.',
+      'Place a defect tag at an exact 3D point on the car model - this is the SAME action a human ' +
+      'performs by dragging a tag onto the hologram; it triggers the same crosshair-sweep-and-drop ' +
+      'animation. Prefer the `zone` parameter (a named location on the car) over guessing raw x/y/z - ' +
+      `known zones and their approximate coordinates: ${ZONE_HINT}. ` +
+      'Only pass raw x/y/z (call get_product_diagram first to learn the bounding box) if the defect is ' +
+      'between zones or none of the named zones fit. ' +
+      'Choose severity by asking: does this defect affect FUNCTION or safety (high), is it APPEARANCE-' +
+      'only (low), or is it borderline/unclear (medium)? If you cannot tell what the defect actually is ' +
+      'from the description, use defect_type "unknown" and leave severity unset - a human will classify ' +
+      'it, or call suggest_classification once you have more information.',
     inputSchema: {
       type: 'object',
       properties: {
         product_id: { type: 'string' },
-        x: { type: 'number', description: 'Pixel x from left edge of the diagram.' },
-        y: { type: 'number', description: 'Pixel y from top edge of the diagram.' },
+        zone: { type: 'string', enum: ZONE_NAMES, description: 'A named location on the car - preferred over raw coordinates.' },
+        x: { type: 'number', description: 'World x (front-back) - only if not using `zone`.' },
+        y: { type: 'number', description: 'World y (up-down) - only if not using `zone`.' },
+        z: { type: 'number', description: 'World z (left-right) - only if not using `zone`.' },
         defect_type: { type: 'string', enum: DEFECT_TYPES },
         severity: { type: 'string', enum: ['low', 'med', 'high'] },
         note: { type: 'string', description: 'Optional free-text note, e.g. quoting the inspection note.' },
       },
-      required: ['product_id', 'x', 'y', 'defect_type'],
+      required: ['product_id', 'defect_type'],
     } as const,
     execute: async (input) => {
+      const zoneCoords = input.zone ? CAR_ZONES[input.zone] : null
+      if (!zoneCoords && (input.x === undefined || input.y === undefined || input.z === undefined)) {
+        throw new Error('Provide either `zone` or all of x, y, z.')
+      }
+      const [x, y, z] = zoneCoords ?? [input.x!, input.y!, input.z!]
       const defect = await placeDefectViaAgent({
         product_id: input.product_id,
-        x: input.x,
-        y: input.y,
+        x,
+        y,
+        z,
         defect_type: input.defect_type as never,
         severity: (input.severity as never) ?? null,
         note: input.note ?? null,

@@ -1,9 +1,10 @@
 export type DefectType =
   | 'scratch'
-  | 'crack'
+  | 'dent'
+  | 'paint_defect'
   | 'misalignment'
-  | 'solder_bridge'
-  | 'missing_component'
+  | 'crack'
+  | 'missing_part'
   | 'unknown'
 
 export type Severity = 'low' | 'med' | 'high'
@@ -16,8 +17,12 @@ export interface Product {
   id: string
   name: string
   diagram_url: string
+  /** Car bounding-box length (x-axis range: 0..diagram_width). */
   diagram_width: number
+  /** Car bounding-box height (y-axis range: 0..diagram_height). */
   diagram_height: number
+  /** Car bounding-box width (z-axis range: 0..diagram_depth). */
+  diagram_depth: number
   created_at: string
 }
 
@@ -26,6 +31,7 @@ export interface Defect {
   product_id: string
   x: number
   y: number
+  z: number
   defect_type: DefectType
   severity: Severity | null
   note: string | null
@@ -59,10 +65,11 @@ export interface Report {
 
 export const DEFECT_TYPES: DefectType[] = [
   'scratch',
-  'crack',
+  'dent',
+  'paint_defect',
   'misalignment',
-  'solder_bridge',
-  'missing_component',
+  'crack',
+  'missing_part',
   'unknown',
 ]
 
@@ -74,28 +81,57 @@ export const SEVERITY_COLORS: Record<Severity, string> = {
 
 export const DEFECT_LABELS: Record<DefectType, string> = {
   scratch: 'Scratch',
-  crack: 'Crack',
+  dent: 'Dent',
+  paint_defect: 'Paint Defect',
   misalignment: 'Misalignment',
-  solder_bridge: 'Solder Bridge',
-  missing_component: 'Missing Component',
+  crack: 'Crack',
+  missing_part: 'Missing Part',
   unknown: 'Unknown / Flag',
 }
 
-/** Default severity applied when a human drags a palette tag onto the diagram - editable afterwards. */
+/** Default severity applied when a human drags a palette tag onto the car - editable afterwards. */
 export const DEFAULT_SEVERITY: Record<DefectType, Severity | null> = {
   scratch: 'low',
-  crack: 'med',
+  dent: 'med',
+  paint_defect: 'low',
   misalignment: 'med',
-  solder_bridge: 'high',
-  missing_component: 'high',
+  crack: 'med',
+  missing_part: 'high',
   unknown: null,
 }
 
 export const PALETTE_COLORS: Record<DefectType, string> = {
   scratch: SEVERITY_COLORS.low,
-  crack: SEVERITY_COLORS.med,
+  dent: SEVERITY_COLORS.med,
+  paint_defect: SEVERITY_COLORS.low,
   misalignment: SEVERITY_COLORS.med,
-  solder_bridge: SEVERITY_COLORS.high,
-  missing_component: SEVERITY_COLORS.high,
+  crack: SEVERITY_COLORS.med,
+  missing_part: SEVERITY_COLORS.high,
   unknown: '#9ca3af',
+}
+
+/**
+ * Fixed reference points on the car's bounding box (0..diagram_width x,
+ * 0..diagram_height y, 0..diagram_depth z) - given to the agent in the
+ * log_defect tool description so it can reason in named zones instead of
+ * guessing raw 3D coordinates.
+ */
+export const CAR_ZONES: Record<string, [number, number, number]> = {
+  front_bumper: [4.1, 0.5, 0.95],
+  hood: [3.2, 0.75, 0.95],
+  windshield: [2.5, 1.2, 0.95],
+  roof: [1.9, 1.5, 0.95],
+  rear_windshield: [1.3, 1.2, 0.95],
+  trunk: [0.6, 0.75, 0.95],
+  rear_bumper: [0.1, 0.5, 0.95],
+  left_front_door: [2.6, 0.65, 1.85],
+  left_rear_door: [1.6, 0.65, 1.85],
+  right_front_door: [2.6, 0.65, 0.05],
+  right_rear_door: [1.6, 0.65, 0.05],
+  left_front_fender: [3.4, 0.55, 1.75],
+  right_front_fender: [3.4, 0.55, 0.15],
+  left_headlight: [4.15, 0.55, 1.5],
+  right_headlight: [4.15, 0.55, 0.4],
+  left_mirror: [2.9, 1.05, 1.9],
+  right_mirror: [2.9, 1.05, 0.0],
 }

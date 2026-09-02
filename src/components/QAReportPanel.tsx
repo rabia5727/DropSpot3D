@@ -9,8 +9,13 @@ interface Props {
   onClose: () => void
 }
 
-const rowVariants = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0 } }
+const rowVariants = { hidden: { opacity: 0, x: 12 }, show: { opacity: 1, x: 0 } }
 
+/**
+ * A compact HUD readout, not a blocking modal - the hologram itself (the
+ * car + glowing defect markers) is the primary display. This just adds a
+ * small pass/fail summary alongside it.
+ */
 export function QAReportPanel({ productId, onClose }: Props) {
   const [report, setReport] = useState<ReportSummary | null>(null)
 
@@ -19,61 +24,57 @@ export function QAReportPanel({ productId, onClose }: Props) {
   }, [productId])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#12141c] p-6"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">QA Report</h2>
-          <button type="button" onClick={onClose} className="text-white/50 hover:text-white">
-            ×
-          </button>
-        </div>
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      className="absolute right-4 top-4 z-40 w-64 rounded-xl border border-cyan-400/30 bg-[#050810]/90 p-4 shadow-[0_0_30px_rgba(34,211,238,0.15)] backdrop-blur"
+    >
+      <div className="flex items-center justify-between">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Scan Report</h2>
+        <button type="button" onClick={onClose} className="text-white/40 hover:text-white">
+          ×
+        </button>
+      </div>
 
-        {!report ? (
-          <p className="mt-6 text-sm text-white/50">Generating…</p>
-        ) : (
+      {!report ? (
+        <p className="mt-4 text-xs text-white/50">Scanning…</p>
+      ) : (
+        <motion.div
+          initial="hidden"
+          animate="show"
+          variants={{ show: { transition: { staggerChildren: 0.06 } } }}
+          className="mt-3 space-y-2"
+        >
           <motion.div
-            initial="hidden"
-            animate="show"
-            variants={{ show: { transition: { staggerChildren: 0.08 } } }}
-            className="mt-4 space-y-3"
+            variants={rowVariants}
+            className={`rounded-lg border px-3 py-2 text-center text-sm font-bold tracking-wide ${
+              report.passFail === 'pass'
+                ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300'
+                : 'border-red-400/40 bg-red-400/10 text-red-300'
+            }`}
           >
-            <motion.div
-              variants={rowVariants}
-              className={`rounded-xl p-3 text-center text-lg font-bold ${
-                report.passFail === 'pass'
-                  ? 'bg-green-500/20 text-green-300'
-                  : 'bg-red-500/20 text-red-300'
-              }`}
-            >
-              {report.passFail === 'pass' ? 'PASS' : 'FAIL — Rework Recommended'}
-            </motion.div>
-
-            <motion.p variants={rowVariants} className="text-sm text-white/70">
-              {report.total} defects logged, {report.unresolved} unresolved.
-            </motion.p>
-
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {Object.entries(report.byType)
-                .filter(([, count]) => count > 0)
-                .map(([type, count]) => (
-                  <motion.div key={type} variants={rowVariants} className="rounded-lg bg-white/5 p-2 text-white/80">
-                    {DEFECT_LABELS[type as keyof typeof DEFECT_LABELS]}: {count}
-                  </motion.div>
-                ))}
-            </div>
-
-            <motion.div variants={rowVariants} className="flex gap-3 text-xs text-white/60">
-              <span>Low: {report.bySeverity.low}</span>
-              <span>Med: {report.bySeverity.med}</span>
-              <span>High: {report.bySeverity.high}</span>
-            </motion.div>
+            {report.passFail === 'pass' ? 'PASS' : 'FAIL — REWORK'}
           </motion.div>
-        )}
-      </motion.div>
-    </div>
+          <motion.p variants={rowVariants} className="text-[11px] text-white/50">
+            {report.total} defects · {report.unresolved} unresolved
+          </motion.p>
+          <div className="space-y-1">
+            {Object.entries(report.byType)
+              .filter(([, count]) => count > 0)
+              .map(([type, count]) => (
+                <motion.div
+                  key={type}
+                  variants={rowVariants}
+                  className="flex justify-between text-[11px] text-white/70"
+                >
+                  <span>{DEFECT_LABELS[type as keyof typeof DEFECT_LABELS]}</span>
+                  <span className="text-cyan-300">{count}</span>
+                </motion.div>
+              ))}
+          </div>
+        </motion.div>
+      )}
+    </motion.div>
   )
 }

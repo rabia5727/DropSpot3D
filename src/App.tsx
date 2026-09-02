@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
+import { CarScene, type CarSceneHandle } from './components/CarScene'
 import { DefectDetailCard } from './components/DefectDetailCard'
 import { DefectPalette } from './components/DefectPalette'
 import { DefectTable } from './components/DefectTable'
-import { DiagramBoard } from './components/DiagramBoard'
 import { ProductSwitcher } from './components/ProductSwitcher'
 import { QAReportPanel } from './components/QAReportPanel'
 import { useDefects } from './hooks/useDefects'
@@ -17,7 +17,7 @@ function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedDefectId, setSelectedDefectId] = useState<string | null>(null)
   const [showReport, setShowReport] = useState(false)
-  const diagramRef = useRef<HTMLDivElement>(null)
+  const carSceneRef = useRef<CarSceneHandle>(null)
 
   const { defects, refetch } = useDefects(selectedId)
   const product = products.find((p) => p.id === selectedId) ?? null
@@ -33,16 +33,16 @@ function App() {
   }, [])
 
   async function handleDropAt(type: DefectType, point: { x: number; y: number }) {
-    if (!product || !diagramRef.current) return
-    const rect = diagramRef.current.getBoundingClientRect()
-    const relX = (point.x - rect.left) / rect.width
-    const relY = (point.y - rect.top) / rect.height
-    if (relX < 0 || relX > 1 || relY < 0 || relY > 1) return // dropped outside the diagram
+    if (!product) return
+    const hit = carSceneRef.current?.raycastFromClient(point.x, point.y)
+    if (!hit) return // dropped outside the car model
 
+    const [x, y, z] = hit
     await placeDefect({
       product_id: product.id,
-      x: relX * product.diagram_width,
-      y: relY * product.diagram_height,
+      x,
+      y,
+      z,
       defect_type: type,
       severity: DEFAULT_SEVERITY[type],
       source: 'human',
@@ -58,14 +58,14 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0d12] p-6 text-white">
+    <div className="min-h-screen bg-[#050810] p-6 text-white">
       {/* Registers all WebMCP tools once, at the app root - never conditionally unmounted. */}
       <ToolRegistrar />
 
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">LineCheck</h1>
-          <p className="text-sm text-white/50">Visual QA inspection board</p>
+          <h1 className="text-xl font-bold tracking-wide text-cyan-300">DropSpot3D</h1>
+          <p className="text-sm text-white/50">Holographic QA inspection board</p>
         </div>
         <div className="flex items-center gap-3">
           {product && (
@@ -83,9 +83,9 @@ function App() {
             type="button"
             onClick={() => setShowReport(true)}
             disabled={!product}
-            className="rounded-lg bg-sky-500 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
+            className="rounded-lg bg-cyan-500 px-3 py-2 text-sm font-medium text-[#050810] disabled:opacity-40"
           >
-            Generate QA Report
+            Scan / Report
           </button>
         </div>
       </header>
@@ -93,12 +93,12 @@ function App() {
       {!product ? (
         <p className="text-white/50">Loading products…</p>
       ) : (
-        <div className="grid grid-cols-[220px_1fr_280px] gap-6">
+        <div className="grid grid-cols-[200px_minmax(420px,1fr)_260px] gap-4">
           <DefectPalette onDropAt={handleDropAt} />
 
-          <div className="relative flex justify-center">
-            <DiagramBoard
-              ref={diagramRef}
+          <div className="relative h-[480px] w-full max-w-3xl overflow-hidden rounded-2xl border border-cyan-500/20 bg-[#050810] shadow-[0_0_40px_rgba(34,211,238,0.08)]">
+            <CarScene
+              ref={carSceneRef}
               product={product}
               defects={defects}
               onSelectDefect={(d) => setSelectedDefectId(d.id)}
@@ -106,6 +106,9 @@ function App() {
             <AnimatePresence>
               {selectedDefect && (
                 <DefectDetailCard defect={selectedDefect} onClose={() => setSelectedDefectId(null)} />
+              )}
+              {showReport && (
+                <QAReportPanel productId={product.id} onClose={() => setShowReport(false)} />
               )}
             </AnimatePresence>
           </div>
@@ -117,10 +120,6 @@ function App() {
             <DefectTable defects={defects} onSelect={(d) => setSelectedDefectId(d.id)} />
           </div>
         </div>
-      )}
-
-      {showReport && product && (
-        <QAReportPanel productId={product.id} onClose={() => setShowReport(false)} />
       )}
     </div>
   )
