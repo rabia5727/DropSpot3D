@@ -46,4 +46,8 @@ The database schema lives in [`supabase/migrations/`](supabase/migrations/) (run
 
 ## Stack
 
-Vite + React + TypeScript, Three.js + React Three Fiber (the 3D holographic car), Framer Motion (palette drag/snap/pulse), Supabase (Postgres + RLS), `@mcp-b/global` + `@mcp-b/react-webmcp` for WebMCP tool registration.
+Vite + React + TypeScript, Three.js + React Three Fiber (the 3D holographic car), Framer Motion (palette drag/snap/pulse), Supabase (Postgres + RLS + Storage for defect photos), `@mcp-b/global` + `@mcp-b/react-webmcp` for WebMCP tool registration.
+
+## Credits
+
+Car model: ["Generic Sedan Car"](https://sketchfab.com/3d-models/generic-sedan-car-58c33766470d46e7b2aed542650494e5) by MMC Works, licensed [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/) — an original generic design, not modeled after any real manufacturer's vehicle.
