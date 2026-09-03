@@ -1,79 +1,89 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { generateReport } from '../lib/defects'
-import type { ReportSummary } from '../lib/types'
+import { generateReport, summarizeDefects } from '../lib/defects'
+import type { Defect } from '../lib/types'
 import { DEFECT_LABELS } from '../lib/types'
 
 interface Props {
   productId: string
-  onClose: () => void
+  defects: Defect[]
 }
 
 const rowVariants = { hidden: { opacity: 0, x: 12 }, show: { opacity: 1, x: 0 } }
 
 /**
- * A compact HUD readout, not a blocking modal - the hologram itself (the
- * car + glowing defect markers) is the primary display. This just adds a
- * small pass/fail summary alongside it.
+ * Always-on HUD readout - recalculates instantly from whatever's on the car
+ * right now (summarizeDefects is pure/synchronous over the already-loaded
+ * `defects` prop), no manual "scan" click needed. "Log Snapshot" is separate:
+ * it persists a formal row to the `reports` table for history/audit, which
+ * is what the generate_qa_report WebMCP tool also does.
  */
-export function QAReportPanel({ productId, onClose }: Props) {
-  const [report, setReport] = useState<ReportSummary | null>(null)
+export function QAReportPanel({ productId, defects }: Props) {
+  const [logging, setLogging] = useState(false)
+  const [lastLoggedAt, setLastLoggedAt] = useState<Date | null>(null)
+  const report = summarizeDefects(defects)
 
-  useEffect(() => {
-    generateReport({ product_id: productId }).then(setReport)
-  }, [productId])
+  async function handleLogSnapshot() {
+    setLogging(true)
+    try {
+      await generateReport({ product_id: productId })
+      setLastLoggedAt(new Date())
+    } finally {
+      setLogging(false)
+    }
+  }
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      className="absolute right-4 top-4 z-40 w-64 rounded-xl border border-cyan-400/30 bg-[#050810]/90 p-4 shadow-[0_0_30px_rgba(34,211,238,0.15)] backdrop-blur"
+      layout
+      className="absolute right-4 top-4 z-30 w-64 rounded-xl border border-cyan-400/30 bg-[#050810]/90 p-4 shadow-[0_0_30px_rgba(34,211,238,0.15)] backdrop-blur"
     >
-      <div className="flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Scan Report</h2>
-        <button type="button" onClick={onClose} className="text-white/40 hover:text-white">
-          ×
-        </button>
-      </div>
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Live Scan</h2>
 
-      {!report ? (
-        <p className="mt-4 text-xs text-white/50">Scanning…</p>
-      ) : (
+      <motion.div layout className="mt-3 space-y-2">
         <motion.div
-          initial="hidden"
-          animate="show"
-          variants={{ show: { transition: { staggerChildren: 0.06 } } }}
-          className="mt-3 space-y-2"
+          layout
+          className={`rounded-lg border px-3 py-2 text-center text-sm font-bold tracking-wide ${
+            report.passFail === 'pass'
+              ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300'
+              : 'border-red-400/40 bg-red-400/10 text-red-300'
+          }`}
         >
-          <motion.div
-            variants={rowVariants}
-            className={`rounded-lg border px-3 py-2 text-center text-sm font-bold tracking-wide ${
-              report.passFail === 'pass'
-                ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300'
-                : 'border-red-400/40 bg-red-400/10 text-red-300'
-            }`}
-          >
-            {report.passFail === 'pass' ? 'PASS' : 'FAIL — REWORK'}
-          </motion.div>
-          <motion.p variants={rowVariants} className="text-[11px] text-white/50">
-            {report.total} defects · {report.unresolved} unresolved
-          </motion.p>
-          <div className="space-y-1">
-            {Object.entries(report.byType)
-              .filter(([, count]) => count > 0)
-              .map(([type, count]) => (
-                <motion.div
-                  key={type}
-                  variants={rowVariants}
-                  className="flex justify-between text-[11px] text-white/70"
-                >
-                  <span>{DEFECT_LABELS[type as keyof typeof DEFECT_LABELS]}</span>
-                  <span className="text-cyan-300">{count}</span>
-                </motion.div>
-              ))}
-          </div>
+          {report.passFail === 'pass' ? 'PASS' : 'FAIL — REWORK'}
         </motion.div>
+        <p className="text-[11px] text-white/50">
+          {report.total} defects · {report.unresolved} unresolved
+        </p>
+        <div className="space-y-1">
+          {Object.entries(report.byType)
+            .filter(([, count]) => count > 0)
+            .map(([type, count]) => (
+              <motion.div
+                key={type}
+                layout
+                variants={rowVariants}
+                className="flex justify-between text-[11px] text-white/70"
+              >
+                <span>{DEFECT_LABELS[type as keyof typeof DEFECT_LABELS]}</span>
+                <span className="text-cyan-300">{count}</span>
+              </motion.div>
+            ))}
+          {report.total === 0 && <p className="text-[11px] text-white/40">No defects yet.</p>}
+        </div>
+      </motion.div>
+
+      <button
+        type="button"
+        onClick={handleLogSnapshot}
+        disabled={logging}
+        className="mt-3 w-full rounded-lg border border-cyan-400/30 bg-cyan-400/5 py-1.5 text-[11px] font-medium text-cyan-300 hover:bg-cyan-400/10 disabled:opacity-50"
+      >
+        {logging ? 'Logging…' : 'Log Snapshot to History'}
+      </button>
+      {lastLoggedAt && (
+        <p className="mt-1 text-center text-[10px] text-white/40">
+          Logged {lastLoggedAt.toLocaleTimeString()}
+        </p>
       )}
     </motion.div>
   )

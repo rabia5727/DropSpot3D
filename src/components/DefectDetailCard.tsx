@@ -32,7 +32,7 @@ export function DefectDetailCard({ defect, onClose }: Props) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 10 }}
-      className="absolute right-4 top-4 z-40 w-72 rounded-xl border border-white/10 bg-[#12141c] p-4 shadow-2xl"
+      className="absolute left-4 top-4 z-40 w-72 rounded-xl border border-white/10 bg-[#12141c] p-4 shadow-2xl"
     >
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white">{DEFECT_LABELS[defect.defect_type]}</h3>

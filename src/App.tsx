@@ -16,7 +16,6 @@ function App() {
   const [products, setProducts] = useState<Product[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedDefectId, setSelectedDefectId] = useState<string | null>(null)
-  const [showReport, setShowReport] = useState(false)
   const carSceneRef = useRef<CarSceneHandle>(null)
 
   const { defects, refetch } = useDefects(selectedId)
@@ -79,14 +78,6 @@ function App() {
           >
             Flag for Rework
           </button>
-          <button
-            type="button"
-            onClick={() => setShowReport(true)}
-            disabled={!product}
-            className="rounded-lg bg-cyan-500 px-3 py-2 text-sm font-medium text-[#050810] disabled:opacity-40"
-          >
-            Scan / Report
-          </button>
         </div>
       </header>
 
@@ -103,12 +94,10 @@ function App() {
               defects={defects}
               onSelectDefect={(d) => setSelectedDefectId(d.id)}
             />
+            <QAReportPanel productId={product.id} defects={defects} />
             <AnimatePresence>
               {selectedDefect && (
                 <DefectDetailCard defect={selectedDefect} onClose={() => setSelectedDefectId(null)} />
-              )}
-              {showReport && (
-                <QAReportPanel productId={product.id} onClose={() => setShowReport(false)} />
               )}
             </AnimatePresence>
           </div>

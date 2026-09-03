@@ -115,6 +115,33 @@ function emptyCounts<T extends string>(keys: T[]): Record<T, number> {
   return Object.fromEntries(keys.map((k) => [k, 0])) as Record<T, number>
 }
 
+/**
+ * Pure, synchronous summary from an already-loaded defect list - no network
+ * call. This is what the always-visible HUD uses so the pass/fail readout
+ * recalculates instantly on every change, with no manual "scan" step.
+ */
+export function summarizeDefects(defects: Defect[]): ReportSummary {
+  const byType = emptyCounts(DEFECT_TYPES)
+  const bySeverity = emptyCounts<Severity>(['low', 'med', 'high'])
+  let unresolved = 0
+
+  for (const d of defects) {
+    byType[d.defect_type]++
+    if (d.severity) bySeverity[d.severity]++
+    if (!d.resolved) unresolved++
+  }
+
+  const highUnresolved = defects.filter((d) => d.severity === 'high' && !d.resolved).length
+  const passFail: 'pass' | 'fail' = highUnresolved > 0 ? 'fail' : 'pass'
+
+  return { total: defects.length, byType, bySeverity, unresolved, passFail }
+}
+
+/**
+ * Persists a formal report snapshot to the `reports` table - used by the
+ * generate_qa_report WebMCP tool (and the header button) when someone
+ * explicitly wants a logged record, distinct from the live HUD above.
+ */
 export async function generateReport(params: {
   product_id?: string
   shift_id?: string
@@ -137,27 +164,7 @@ export async function generateReport(params: {
     defects = data as Defect[]
   }
 
-  const byType = emptyCounts(DEFECT_TYPES)
-  const bySeverity = emptyCounts<Severity>(['low', 'med', 'high'])
-  let unresolved = 0
-
-  for (const d of defects) {
-    byType[d.defect_type]++
-    if (d.severity) bySeverity[d.severity]++
-    if (!d.resolved) unresolved++
-  }
-
-  const highUnresolved = defects.filter((d) => d.severity === 'high' && !d.resolved).length
-  const passFail: 'pass' | 'fail' = highUnresolved > 0 ? 'fail' : 'pass'
-
-  const summary: ReportSummary = {
-    total: defects.length,
-    byType,
-    bySeverity,
-    unresolved,
-    passFail,
-  }
-
+  const summary = summarizeDefects(defects)
   const scope_type = params.product_id ? 'product' : params.shift_id ? 'shift' : 'batch'
 
   const { data, error } = await supabase
@@ -168,7 +175,7 @@ export async function generateReport(params: {
       shift_id: params.shift_id ?? null,
       product_ids: params.product_ids ?? null,
       summary,
-      pass_fail: passFail,
+      pass_fail: summary.passFail,
     })
     .select()
     .single()
