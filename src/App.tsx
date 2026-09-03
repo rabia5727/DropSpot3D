@@ -109,7 +109,6 @@ function App() {
               onSelectDefect={(d) => setSelectedDefectId(d.id)}
               onDeselect={() => setSelectedDefectId(null)}
             />
-            <QAReportPanel productId={product.id} defects={defects} />
             <AnimatePresence>
               {selectedDefect && (
                 <DefectDetailCard defect={selectedDefect} onClose={() => setSelectedDefectId(null)} />
@@ -117,11 +116,14 @@ function App() {
             </AnimatePresence>
           </div>
 
-          <div>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/50">
-              Defect Log
-            </h2>
-            <DefectTable defects={defects} onSelect={(d) => setSelectedDefectId(d.id)} />
+          <div className="flex flex-col gap-4">
+            <div>
+              <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/50">
+                Defect Log
+              </h2>
+              <DefectTable defects={defects} onSelect={(d) => setSelectedDefectId(d.id)} />
+            </div>
+            <QAReportPanel productId={product.id} defects={defects} />
           </div>
         </div>
       )}

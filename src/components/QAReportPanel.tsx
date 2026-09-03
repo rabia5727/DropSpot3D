@@ -36,7 +36,7 @@ export function QAReportPanel({ productId, defects }: Props) {
   return (
     <motion.div
       layout
-      className="absolute right-4 top-4 z-30 w-64 rounded-xl border border-cyan-400/30 bg-[#050810]/90 p-4 shadow-[0_0_30px_rgba(34,211,238,0.15)] backdrop-blur"
+      className="w-full rounded-xl border border-cyan-400/30 bg-[#050810]/90 p-4 shadow-[0_0_30px_rgba(34,211,238,0.15)]"
     >
       <h2 className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Live Scan</h2>
 
