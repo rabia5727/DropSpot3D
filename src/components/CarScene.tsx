@@ -34,39 +34,47 @@ function HoloMaterial({ opacity = 0.16 }: { opacity?: number }) {
   )
 }
 
+const REAR_WHEEL_X = 0.9
+const FRONT_WHEEL_X = 3.3
+const WHEEL_RADIUS = 0.32
+const RIDE_HEIGHT = 0.15 // bottom-of-body height - also the arch baseline
+
 const WHEEL_POSITIONS: [number, number, number][] = [
-  [3.3, 0.28, 1.8],
-  [3.3, 0.28, 0.1],
-  [0.9, 0.28, 1.8],
-  [0.9, 0.28, 0.1],
+  [FRONT_WHEEL_X, RIDE_HEIGHT + WHEEL_RADIUS - 0.04, 1.8],
+  [FRONT_WHEEL_X, RIDE_HEIGHT + WHEEL_RADIUS - 0.04, 0.1],
+  [REAR_WHEEL_X, RIDE_HEIGHT + WHEEL_RADIUS - 0.04, 1.8],
+  [REAR_WHEEL_X, RIDE_HEIGHT + WHEEL_RADIUS - 0.04, 0.1],
 ]
 
 /**
- * Sedan side-profile silhouette (rear bumper -> trunk -> rear window ->
- * roof -> windshield -> hood -> front bumper), extruded straight across the
- * car's width. A continuous shape instead of stacked boxes - "cardboard
- * cutout" style, which suits the holographic look while reading as an
- * actual car body rather than a toy/shipping container.
+ * Sports-sedan side-profile silhouette (rear bumper -> short rear deck ->
+ * steep fastback rear window -> low cabin -> long raked windshield -> long
+ * low hood -> pointed front bumper), extruded straight across the car's
+ * width, with wheel arches cut into the bottom edge so the wheels look
+ * tucked into the body instead of floating beside a slab. A continuous
+ * shape instead of stacked boxes - "cardboard cutout" style, which suits
+ * the holographic look while reading as a real, sleek car body.
  *
- * Not a copy of any specific make/model (that would be someone else's
- * trademarked design) - a generic realistic silhouette. Swap in a licensed
- * .glb/.gltf later if one becomes available; nothing else in the app
- * (placement, WebMCP tools, camera) depends on how the body is modeled.
+ * Proportions are inspired by modern sports-sedan stances (long hood, short
+ * rear deck, low fastback roofline) but this is an original silhouette, not
+ * a copy of any specific make/model's trademarked design. Swap in a
+ * licensed .glb/.gltf later if one becomes available; nothing else in the
+ * app (placement, WebMCP tools, camera) depends on how the body is modeled.
  */
 const BODY_WIDTH = 1.7
 const BODY_Z_START = 0.1
 
 // Profile points, used both to build the extrusion and to derive the
 // windshield/rear-window glass angles below - single source of truth.
-const REAR_BUMPER_BOTTOM: [number, number] = [0.1, 0.22]
-const REAR_BUMPER_TOP: [number, number] = [0.05, 0.55]
-const TRUNK: [number, number] = [0.55, 0.68]
-const REAR_WINDOW_TOP: [number, number] = [1.35, 1.3]
-const ROOF_FRONT: [number, number] = [2.55, 1.38]
-const COWL: [number, number] = [3.25, 0.88]
-const HOOD_FRONT: [number, number] = [3.9, 0.75]
-const FRONT_BUMPER_BOTTOM: [number, number] = [4.15, 0.35]
-const FRONT_BOTTOM: [number, number] = [4.05, 0.22]
+const REAR_BUMPER_BOTTOM: [number, number] = [0.15, RIDE_HEIGHT]
+const REAR_BUMPER_TOP: [number, number] = [0.08, 0.42]
+const TRUNK: [number, number] = [0.45, 0.55]
+const REAR_WINDOW_TOP: [number, number] = [1.15, 1.18]
+const ROOF_FRONT: [number, number] = [2.05, 1.25]
+const COWL: [number, number] = [2.85, 0.75]
+const HOOD_FRONT: [number, number] = [3.85, 0.55]
+const FRONT_BUMPER_BOTTOM: [number, number] = [4.15, 0.28]
+const FRONT_BOTTOM: [number, number] = [4.05, RIDE_HEIGHT]
 
 function segmentAngle(a: [number, number], b: [number, number]) {
   return Math.atan2(b[1] - a[1], b[0] - a[0])
@@ -84,13 +92,23 @@ function useCarBodyGeometry() {
     shape.moveTo(...REAR_BUMPER_BOTTOM)
     shape.lineTo(...REAR_BUMPER_TOP)
     shape.lineTo(...TRUNK)
-    shape.quadraticCurveTo(0.85, 0.85, ...REAR_WINDOW_TOP)
-    shape.quadraticCurveTo(1.95, 1.48, ...ROOF_FRONT)
-    shape.quadraticCurveTo(3.0, 1.25, ...COWL)
-    shape.lineTo(...HOOD_FRONT)
-    shape.quadraticCurveTo(4.1, 0.6, ...FRONT_BUMPER_BOTTOM)
+    shape.quadraticCurveTo(0.7, 0.68, ...REAR_WINDOW_TOP) // fastback rear window
+    shape.quadraticCurveTo(1.6, 1.32, ...ROOF_FRONT) // low, short roof
+    shape.quadraticCurveTo(2.5, 1.05, ...COWL) // long raked windshield
+    shape.lineTo(...HOOD_FRONT) // long low hood
+    shape.quadraticCurveTo(4.08, 0.45, ...FRONT_BUMPER_BOTTOM) // pointed nose
     shape.lineTo(...FRONT_BOTTOM)
+
+    // Bottom edge, carved into arches at each wheel so the wheels read as
+    // tucked into the body rather than floating beside a flat slab.
+    const archUp = RIDE_HEIGHT + WHEEL_RADIUS + 0.1
+    shape.lineTo(FRONT_WHEEL_X + WHEEL_RADIUS + 0.05, RIDE_HEIGHT)
+    shape.quadraticCurveTo(FRONT_WHEEL_X, archUp, FRONT_WHEEL_X - WHEEL_RADIUS - 0.05, RIDE_HEIGHT)
+    shape.lineTo(REAR_WHEEL_X + WHEEL_RADIUS + 0.05, RIDE_HEIGHT)
+    shape.quadraticCurveTo(REAR_WHEEL_X, archUp, REAR_WHEEL_X - WHEEL_RADIUS - 0.05, RIDE_HEIGHT)
+    shape.lineTo(...REAR_BUMPER_BOTTOM)
     shape.closePath()
+
     const geometry = new THREE.ExtrudeGeometry(shape, {
       depth: BODY_WIDTH,
       bevelEnabled: false,
@@ -132,19 +150,19 @@ function CarModel() {
           <Edges color={HOLO} />
         </mesh>
       ))}
-      <mesh position={[3.88, 0.55, 1.65]}>
+      <mesh position={[3.98, 0.48, 1.55]}>
         <sphereGeometry args={[0.08, 12, 12]} />
         <meshStandardMaterial color="#fef08a" emissive="#fef08a" emissiveIntensity={1.5} />
       </mesh>
-      <mesh position={[3.88, 0.55, 0.25]}>
+      <mesh position={[3.98, 0.48, 0.35]}>
         <sphereGeometry args={[0.08, 12, 12]} />
         <meshStandardMaterial color="#fef08a" emissive="#fef08a" emissiveIntensity={1.5} />
       </mesh>
-      <mesh position={[0.15, 0.55, 1.65]}>
+      <mesh position={[0.12, 0.38, 1.55]}>
         <sphereGeometry args={[0.07, 12, 12]} />
         <meshStandardMaterial color="#f87171" emissive="#f87171" emissiveIntensity={1.2} />
       </mesh>
-      <mesh position={[0.15, 0.55, 0.25]}>
+      <mesh position={[0.12, 0.38, 0.35]}>
         <sphereGeometry args={[0.07, 12, 12]} />
         <meshStandardMaterial color="#f87171" emissive="#f87171" emissiveIntensity={1.2} />
       </mesh>
@@ -152,7 +170,7 @@ function CarModel() {
   )
 }
 
-const CAR_CENTER: [number, number, number] = [2.1, 0.7, 0.95]
+const CAR_CENTER: [number, number, number] = [2.05, 0.55, 0.95]
 const DEFAULT_CAM_POS: [number, number, number] = [5.5, 3.2, 5.5]
 const OUTWARD_OFFSET = 0.9
 const HOVER_HEIGHT = 0.45
