@@ -31,6 +31,19 @@ function App() {
     })
   }, [])
 
+  // When the agent places a defect, focus it the same way a human click would -
+  // triggers the same camera zoom-in, so the agent's action is visibly "looked at",
+  // not just a dot appearing.
+  useEffect(() => {
+    function handler(e: Event) {
+      const detail = (e as CustomEvent).detail as { id: string; productId: string }
+      if (detail.productId !== selectedId) return
+      setSelectedDefectId(detail.id)
+    }
+    window.addEventListener('agent-defect-placed', handler)
+    return () => window.removeEventListener('agent-defect-placed', handler)
+  }, [selectedId])
+
   async function handleDropAt(type: DefectType, point: { x: number; y: number }) {
     if (!product) return
     const hit = carSceneRef.current?.raycastFromClient(point.x, point.y)
@@ -92,7 +105,9 @@ function App() {
               ref={carSceneRef}
               product={product}
               defects={defects}
+              selectedDefectId={selectedDefectId}
               onSelectDefect={(d) => setSelectedDefectId(d.id)}
+              onDeselect={() => setSelectedDefectId(null)}
             />
             <QAReportPanel productId={product.id} defects={defects} />
             <AnimatePresence>

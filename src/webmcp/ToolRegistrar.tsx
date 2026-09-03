@@ -88,6 +88,11 @@ export function ToolRegistrar() {
         severity: (input.severity as never) ?? null,
         note: input.note ?? null,
       })
+      // Focuses the same camera zoom-in a human click triggers, so the agent's
+      // placement is visibly "looked at" rather than a dot just appearing.
+      window.dispatchEvent(
+        new CustomEvent('agent-defect-placed', { detail: { id: defect.id, productId: defect.product_id } }),
+      )
       return { content: [{ type: 'text', text: JSON.stringify(defect) }] }
     },
   })
