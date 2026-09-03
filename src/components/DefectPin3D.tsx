@@ -12,7 +12,7 @@ interface Props {
   onClick: () => void
 }
 
-const BEAM_HEIGHT = 0.5
+export const BEAM_HEIGHT = 0.5
 
 export function DefectPin3D({ defect, position, dimmed, onClick }: Props) {
   const color = defect.severity ? SEVERITY_COLORS[defect.severity] : '#9ca3af'

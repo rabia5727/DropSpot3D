@@ -131,7 +131,7 @@ function GlassPane({ from, to }: { from: [number, number]; to: [number, number] 
   )
 }
 
-function CarModel() {
+export function CarModel() {
   const bodyGeometry = useCarBodyGeometry()
   return (
     <group>
@@ -170,7 +170,7 @@ function CarModel() {
   )
 }
 
-const CAR_CENTER: [number, number, number] = [2.05, 0.55, 0.95]
+export const CAR_CENTER: [number, number, number] = [2.05, 0.55, 0.95]
 const DEFAULT_CAM_POS: [number, number, number] = [5.5, 3.2, 5.5]
 const OUTWARD_OFFSET = 0.9
 const HOVER_HEIGHT = 0.45

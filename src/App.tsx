@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { CarScene, type CarSceneHandle } from './components/CarScene'
+import { DefectCloseup } from './components/DefectCloseup'
 import { DefectDetailCard } from './components/DefectDetailCard'
 import { DefectPalette } from './components/DefectPalette'
 import { DefectTable } from './components/DefectTable'
@@ -114,6 +115,7 @@ function App() {
                 <DefectDetailCard defect={selectedDefect} onClose={() => setSelectedDefectId(null)} />
               )}
             </AnimatePresence>
+            {selectedDefect && <DefectCloseup defect={selectedDefect} />}
           </div>
 
           <div className="flex flex-col gap-4">
