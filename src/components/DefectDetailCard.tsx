@@ -44,6 +44,14 @@ export function DefectDetailCard({ defect, onClose }: Props) {
         {new Date(defect.created_at).toLocaleString()} · {defect.source}
       </p>
 
+      {defect.photo_url && (
+        <img
+          src={defect.photo_url}
+          alt="Photo of the defect"
+          className="mt-3 h-32 w-full rounded-lg border border-white/10 object-cover"
+        />
+      )}
+
       {defect.suggestion_status === 'pending' && (
         <div className="mt-3 rounded-lg border border-yellow-400/30 bg-yellow-400/10 p-2 text-xs text-yellow-200">
           <p className="font-medium">Agent suggests:</p>

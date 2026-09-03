@@ -58,7 +58,10 @@ export function ToolRegistrar() {
       'Choose severity by asking: does this defect affect FUNCTION or safety (high), is it APPEARANCE-' +
       'only (low), or is it borderline/unclear (medium)? If you cannot tell what the defect actually is ' +
       'from the description, use defect_type "unknown" and leave severity unset - a human will classify ' +
-      'it, or call suggest_classification once you have more information.',
+      'it, or call suggest_classification once you have more information. ' +
+      'If the inspection note included a photo URL you looked at to identify this defect, pass that ' +
+      'exact URL as `photo_url` - it gets stored with the defect and shown to the human reviewing it, ' +
+      'so they see the real photo, not just your description of it.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -70,6 +73,7 @@ export function ToolRegistrar() {
         defect_type: { type: 'string', enum: DEFECT_TYPES },
         severity: { type: 'string', enum: ['low', 'med', 'high'] },
         note: { type: 'string', description: 'Optional free-text note, e.g. quoting the inspection note.' },
+        photo_url: { type: 'string', description: 'URL of the real defect photo, if one was given to you.' },
       },
       required: ['product_id', 'defect_type'],
     } as const,
@@ -84,6 +88,7 @@ export function ToolRegistrar() {
         x,
         y,
         z,
+        photo_url: input.photo_url ?? null,
         defect_type: input.defect_type as never,
         severity: (input.severity as never) ?? null,
         note: input.note ?? null,

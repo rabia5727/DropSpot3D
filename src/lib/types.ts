@@ -41,6 +41,8 @@ export interface Defect {
   suggested_severity: Severity | null
   suggestion_note: string | null
   suggestion_status: SuggestionStatus
+  /** URL of a real photo of this defect - human-uploaded, or passed by an agent that viewed one. */
+  photo_url: string | null
   created_at: string
 }
 

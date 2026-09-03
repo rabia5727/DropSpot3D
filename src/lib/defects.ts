@@ -37,6 +37,8 @@ export interface PlaceDefectInput {
   severity?: Severity | null
   note?: string | null
   source?: 'human' | 'agent'
+  /** URL of a real photo of this defect - see uploadDefectPhoto() below. */
+  photo_url?: string | null
 }
 
 /**
@@ -60,12 +62,29 @@ export async function placeDefect(input: PlaceDefectInput): Promise<Defect> {
       severity: input.severity ?? null,
       note: input.note ?? null,
       source: input.source ?? 'human',
+      photo_url: input.photo_url ?? null,
     })
     .select()
     .single()
   if (error) throw error
   notifyChanged(`${DEFECT_LABELS[input.defect_type]} logged to database (${input.source ?? 'human'})`)
   return data as Defect
+}
+
+/**
+ * Uploads a photo to the public 'defect-photos' storage bucket and returns
+ * its public URL. Used both by the in-app upload widget (human path) and
+ * available for anyone to paste the resulting link into an agent chat, so
+ * the agent can view the photo and pass the same URL to log_defect - the
+ * real photo then travels with the defect record end to end.
+ */
+export async function uploadDefectPhoto(file: File): Promise<string> {
+  const ext = file.name.split('.').pop() || 'jpg'
+  const path = `${crypto.randomUUID()}.${ext}`
+  const { error } = await supabase.storage.from('defect-photos').upload(path, file)
+  if (error) throw error
+  const { data } = supabase.storage.from('defect-photos').getPublicUrl(path)
+  return data.publicUrl
 }
 
 /**

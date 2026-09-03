@@ -36,22 +36,29 @@ export function DefectCloseup({ defect }: Props) {
   return (
     <div className="absolute bottom-4 right-4 z-30 overflow-hidden rounded-xl border-2 border-cyan-400/50 bg-[#050810] shadow-[0_0_20px_rgba(34,211,238,0.35)]">
       <div className="h-40 w-40">
-        <Canvas
-          key={defect.id}
-          camera={{ position: camPos.toArray(), fov: 32 }}
-          onCreated={(state) => {
-            state.camera.lookAt(markerPoint)
-          }}
-        >
-          <color attach="background" args={['#050810']} />
-          <ambientLight intensity={0.6} color="#22d3ee" />
-          <pointLight position={[2, 2, 2]} intensity={30} color="#67e8f9" />
-          <CarModel />
-          <DefectPin3D defect={defect} position={[defect.x, defect.y, defect.z]} dimmed={false} onClick={() => {}} />
-        </Canvas>
+        {defect.photo_url ? (
+          // A real photo of this defect exists - show that directly, not the
+          // abstract 3D marker. This is the literal "zoom in, see the real
+          // defect" moment.
+          <img src={defect.photo_url} alt="Photo of the defect" className="h-full w-full object-cover" />
+        ) : (
+          <Canvas
+            key={defect.id}
+            camera={{ position: camPos.toArray(), fov: 32 }}
+            onCreated={(state) => {
+              state.camera.lookAt(markerPoint)
+            }}
+          >
+            <color attach="background" args={['#050810']} />
+            <ambientLight intensity={0.6} color="#22d3ee" />
+            <pointLight position={[2, 2, 2]} intensity={30} color="#67e8f9" />
+            <CarModel />
+            <DefectPin3D defect={defect} position={[defect.x, defect.y, defect.z]} dimmed={false} onClick={() => {}} />
+          </Canvas>
+        )}
       </div>
       <div className="bg-black/70 px-2 py-1 text-center text-[10px] font-medium uppercase tracking-wide text-cyan-300">
-        Close-up
+        {defect.photo_url ? 'Real Photo' : 'Close-up'}
       </div>
     </div>
   )

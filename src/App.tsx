@@ -5,6 +5,7 @@ import { DefectCloseup } from './components/DefectCloseup'
 import { DefectDetailCard } from './components/DefectDetailCard'
 import { DefectPalette } from './components/DefectPalette'
 import { DefectTable } from './components/DefectTable'
+import { PhotoUploadWidget } from './components/PhotoUploadWidget'
 import { ProductSwitcher } from './components/ProductSwitcher'
 import { QAReportPanel } from './components/QAReportPanel'
 import { SyncLog } from './components/SyncLog'
@@ -100,7 +101,10 @@ function App() {
         <p className="text-white/50">Loading products…</p>
       ) : (
         <div className="grid grid-cols-[200px_minmax(420px,1fr)_260px] gap-4">
-          <DefectPalette onDropAt={handleDropAt} />
+          <div className="flex flex-col gap-4">
+            <DefectPalette onDropAt={handleDropAt} />
+            <PhotoUploadWidget />
+          </div>
 
           <div className="relative h-[480px] w-full max-w-3xl overflow-hidden rounded-2xl border border-cyan-500/20 bg-[#050810] shadow-[0_0_40px_rgba(34,211,238,0.08)]">
             <CarScene
