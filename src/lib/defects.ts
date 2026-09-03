@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient'
 import type { Defect, DefectType, Product, Report, ReportSummary, Severity } from './types'
-import { DEFECT_TYPES } from './types'
+import { DEFECT_LABELS, DEFECT_TYPES } from './types'
 
 /**
  * Every UI action (drag-drop, buttons) and every WebMCP tool calls into this
@@ -39,9 +39,13 @@ export interface PlaceDefectInput {
   source?: 'human' | 'agent'
 }
 
-/** Any successful write goes through this so every view (UI + future tabs) can just listen once. */
-function notifyChanged() {
-  window.dispatchEvent(new Event('linecheck:changed'))
+/**
+ * Any successful write goes through this - both to tell views to refetch,
+ * and to feed the visible "Sync Log" HUD, so a database write is something
+ * you can actually see happen in the app instead of a silent backend call.
+ */
+function notifyChanged(message: string) {
+  window.dispatchEvent(new CustomEvent('linecheck:changed', { detail: message }))
 }
 
 export async function placeDefect(input: PlaceDefectInput): Promise<Defect> {
@@ -60,7 +64,7 @@ export async function placeDefect(input: PlaceDefectInput): Promise<Defect> {
     .select()
     .single()
   if (error) throw error
-  notifyChanged()
+  notifyChanged(`${DEFECT_LABELS[input.defect_type]} logged to database (${input.source ?? 'human'})`)
   return data as Defect
 }
 
@@ -97,7 +101,11 @@ export async function updateDefect(input: UpdateDefectInput): Promise<Defect> {
     .select()
     .single()
   if (error) throw error
-  notifyChanged()
+  const message =
+    patch.resolved !== undefined
+      ? `Defect marked ${patch.resolved ? 'resolved' : 'reopened'} in database`
+      : 'Defect record updated in database'
+  notifyChanged(message)
   return data as Defect
 }
 
@@ -181,6 +189,7 @@ export async function generateReport(params: {
     .single()
   if (error) throw error
 
+  notifyChanged(`Report snapshot saved to database (${summary.passFail.toUpperCase()})`)
   return { ...summary, id: data.id as string }
 }
 
@@ -196,6 +205,7 @@ export async function flagForRework(productId: string, reason: string) {
     .select()
     .single()
   if (error) throw error
+  notifyChanged('Unit flagged for rework in database')
   return data as Report
 }
 
@@ -218,7 +228,7 @@ export async function suggestClassification(input: {
     .select()
     .single()
   if (error) throw error
-  notifyChanged()
+  notifyChanged(`Agent's classification suggestion saved to database`)
   return data as Defect
 }
 
@@ -234,7 +244,7 @@ export async function resolveSuggestion(
       .select()
       .single()
     if (error) throw error
-    notifyChanged()
+    notifyChanged('Suggestion rejected, saved to database')
     return data as Defect
   }
 
@@ -257,6 +267,6 @@ export async function resolveSuggestion(
     .select()
     .single()
   if (error) throw error
-  notifyChanged()
+  notifyChanged('Suggestion accepted, saved to database')
   return data as Defect
 }

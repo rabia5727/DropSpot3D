@@ -7,6 +7,7 @@ import { DefectPalette } from './components/DefectPalette'
 import { DefectTable } from './components/DefectTable'
 import { ProductSwitcher } from './components/ProductSwitcher'
 import { QAReportPanel } from './components/QAReportPanel'
+import { SyncLog } from './components/SyncLog'
 import { useDefects } from './hooks/useDefects'
 import { flagForRework, listProducts, placeDefect } from './lib/defects'
 import type { DefectType, Product } from './lib/types'
@@ -126,6 +127,7 @@ function App() {
               <DefectTable defects={defects} onSelect={(d) => setSelectedDefectId(d.id)} />
             </div>
             <QAReportPanel productId={product.id} defects={defects} />
+            <SyncLog />
           </div>
         </div>
       )}
