@@ -4,6 +4,7 @@ import { CarScene } from './components/CarScene'
 import { DefectCloseup } from './components/DefectCloseup'
 import { DefectDetailCard } from './components/DefectDetailCard'
 import { DefectTable } from './components/DefectTable'
+import { InspectionReportModal } from './components/InspectionReportModal'
 import { ProductSwitcher } from './components/ProductSwitcher'
 import { QAReportPanel } from './components/QAReportPanel'
 import { SyncLog } from './components/SyncLog'
@@ -16,6 +17,7 @@ function App() {
   const [products, setProducts] = useState<Product[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedDefectId, setSelectedDefectId] = useState<string | null>(null)
+  const [showFullReport, setShowFullReport] = useState(false)
 
   const { defects, refetch } = useDefects(selectedId)
   const product = products.find((p) => p.id === selectedId) ?? null
@@ -123,10 +125,22 @@ function App() {
               </h2>
               <DefectTable defects={defects} onSelect={(d) => setSelectedDefectId(d.id)} />
             </div>
-            <QAReportPanel productId={product.id} defects={defects} />
+            <QAReportPanel
+              productId={product.id}
+              defects={defects}
+              onOpenFullReport={() => setShowFullReport(true)}
+            />
             <SyncLog />
           </div>
         </div>
+      )}
+
+      {showFullReport && product && (
+        <InspectionReportModal
+          product={product}
+          defects={defects}
+          onClose={() => setShowFullReport(false)}
+        />
       )}
     </div>
   )

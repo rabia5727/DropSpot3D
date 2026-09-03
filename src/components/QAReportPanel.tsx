@@ -7,6 +7,7 @@ import { DEFECT_LABELS } from '../lib/types'
 interface Props {
   productId: string
   defects: Defect[]
+  onOpenFullReport: () => void
 }
 
 const rowVariants = { hidden: { opacity: 0, x: 12 }, show: { opacity: 1, x: 0 } }
@@ -18,7 +19,7 @@ const rowVariants = { hidden: { opacity: 0, x: 12 }, show: { opacity: 1, x: 0 } 
  * it persists a formal row to the `reports` table for history/audit, which
  * is what the generate_qa_report WebMCP tool also does.
  */
-export function QAReportPanel({ productId, defects }: Props) {
+export function QAReportPanel({ productId, defects, onOpenFullReport }: Props) {
   const [logging, setLogging] = useState(false)
   const [lastLoggedAt, setLastLoggedAt] = useState<Date | null>(null)
   const report = summarizeDefects(defects)
@@ -72,14 +73,23 @@ export function QAReportPanel({ productId, defects }: Props) {
         </div>
       </motion.div>
 
-      <button
-        type="button"
-        onClick={handleLogSnapshot}
-        disabled={logging}
-        className="mt-3 w-full rounded-lg border border-cyan-400/30 bg-cyan-400/5 py-1.5 text-[11px] font-medium text-cyan-300 hover:bg-cyan-400/10 disabled:opacity-50"
-      >
-        {logging ? 'Logging…' : 'Log Snapshot to History'}
-      </button>
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          onClick={onOpenFullReport}
+          className="flex-1 rounded-lg border border-cyan-400/30 bg-cyan-400/5 py-1.5 text-[11px] font-medium text-cyan-300 hover:bg-cyan-400/10"
+        >
+          Full Report
+        </button>
+        <button
+          type="button"
+          onClick={handleLogSnapshot}
+          disabled={logging}
+          className="flex-1 rounded-lg border border-white/10 bg-white/5 py-1.5 text-[11px] font-medium text-white/70 hover:bg-white/10 disabled:opacity-50"
+        >
+          {logging ? 'Logging…' : 'Log Snapshot'}
+        </button>
+      </div>
       {lastLoggedAt && (
         <p className="mt-1 text-center text-[10px] text-white/40">
           Logged {lastLoggedAt.toLocaleTimeString()}

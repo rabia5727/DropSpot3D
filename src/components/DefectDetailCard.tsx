@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { resolveSuggestion, updateDefect, uploadDefectPhoto } from '../lib/defects'
+import { deleteDefect, resolveSuggestion, updateDefect, uploadDefectPhoto } from '../lib/defects'
 import type { Defect } from '../lib/types'
 import { DEFECT_LABELS } from '../lib/types'
 
@@ -14,7 +14,19 @@ export function DefectDetailCard({ defect, onClose }: Props) {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleDelete() {
+    if (!window.confirm('Delete this defect? This can\'t be undone.')) return
+    setDeleting(true)
+    try {
+      await deleteDefect(defect.id)
+      onClose()
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   async function saveNote() {
     if (note === (defect.note ?? '')) return
@@ -137,10 +149,20 @@ export function DefectDetailCard({ defect, onClose }: Props) {
         className="mt-3 h-16 w-full resize-none rounded-lg border border-white/10 bg-white/5 p-2 text-xs text-white outline-none"
       />
 
-      <label className="mt-3 flex items-center gap-2 text-xs text-white/70">
-        <input type="checkbox" checked={defect.resolved} onChange={toggleResolved} />
-        Resolved
-      </label>
+      <div className="mt-3 flex items-center justify-between">
+        <label className="flex items-center gap-2 text-xs text-white/70">
+          <input type="checkbox" checked={defect.resolved} onChange={toggleResolved} />
+          Resolved
+        </label>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
+        >
+          {deleting ? 'Deleting…' : 'Delete'}
+        </button>
+      </div>
       {saving && <p className="mt-1 text-[10px] text-white/40">Saving…</p>}
     </motion.div>
   )

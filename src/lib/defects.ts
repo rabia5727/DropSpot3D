@@ -131,6 +131,17 @@ export async function updateDefect(input: UpdateDefectInput): Promise<Defect> {
   return data as Defect
 }
 
+/**
+ * Human-only (not exposed as a WebMCP tool - deleting is a destructive
+ * action an agent shouldn't get to take unilaterally). Mainly for
+ * mis-clicks: click the wrong spot on the car, delete it, no trace left.
+ */
+export async function deleteDefect(id: string): Promise<void> {
+  const { error } = await supabase.from('defects').delete().eq('id', id)
+  if (error) throw error
+  notifyChanged('Defect deleted from database')
+}
+
 export async function fetchHistory(productId: string): Promise<Defect[]> {
   const { data, error } = await supabase
     .from('defects')
