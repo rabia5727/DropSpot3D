@@ -1,15 +1,10 @@
-import { forwardRef, useImperativeHandle, useMemo, useRef } from 'react'
-import { Canvas, useFrame, useThree, type RootState } from '@react-three/fiber'
-import { Grid, Sparkles, useGLTF } from '@react-three/drei'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
+import { Grid, OrbitControls, Sparkles, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import type { Defect, Product } from '../lib/types'
 import { DefectPin3D } from './DefectPin3D'
 import { Crosshair3D } from './Crosshair3D'
-
-export interface CarSceneHandle {
-  /** Raycasts from a client-space (mouse/pointer) coordinate into the car model, returning the hit world point or null on a miss. */
-  raycastFromClient: (clientX: number, clientY: number) => [number, number, number] | null
-}
 
 interface Props {
   product: Product
@@ -17,6 +12,8 @@ interface Props {
   selectedDefectId: string | null
   onSelectDefect: (defect: Defect) => void
   onDeselect: () => void
+  /** Fires with the exact 3D surface point when the car body itself (not a pin) is clicked. */
+  onPlaceAt: (point: [number, number, number]) => void
 }
 
 const HOLO = '#22d3ee'
@@ -95,93 +92,92 @@ const DEFAULT_CAM_POS: [number, number, number] = [5.5, 3.2, 5.5]
 const OUTWARD_OFFSET = 0.9
 const HOVER_HEIGHT = 0.45
 
+const ARRIVED_EPSILON = 0.05
+
 /**
- * Scripted camera - not free orbit controls. Flies to a fixed overview
- * position/lookAt when nothing is selected, or - when a defect is focused -
- * moves OUTWARD from the car's center through the defect point plus a hover
- * offset, and looks at the defect.
+ * Free orbit when nothing's selected (drag to rotate, scroll to zoom, around
+ * CAR_CENTER) - but clicking a defect hands full control to a scripted fly-in
+ * that moves OUTWARD from the car's center through the defect point plus a
+ * hover offset, so it looks down at the defect instead of just landing at a
+ * generic distance. That "outward from center" construction is also the fix
+ * for a bug where the camera used to land inside the hollow body: since every
+ * defect sits on the surface, going further out along the same center->defect
+ * ray can never end up inside the shell, regardless of which side it's on.
  *
- * That "outward from center" construction is the actual fix for the bug
- * where the camera used to land inside the hollow body: since every defect
- * sits on the surface, going further out along the same center->defect ray
- * can never end up inside the shell, regardless of which side of the car
- * the defect is on.
+ * OrbitControls is only ever MOUNTED while idle and "arrived home" - not just
+ * `enabled={false}` while focused - because drei's OrbitControls keeps
+ * re-asserting the camera position from its own internal state every frame
+ * even when input-disabled, which would fight the scripted fly-in. Fully
+ * unmounting it hands the camera over cleanly.
  */
-function CameraRig({ focusPoint }: { focusPoint: [number, number, number] | null }) {
+function CameraController({ focusPoint }: { focusPoint: [number, number, number] | null }) {
   const { camera } = useThree()
   const targetPos = useRef(new THREE.Vector3(...DEFAULT_CAM_POS))
   const targetLookAt = useRef(new THREE.Vector3(...CAR_CENTER))
   const currentLookAt = useRef(new THREE.Vector3(...CAR_CENTER))
-  const initialized = useRef(false)
+  const [arrivedHome, setArrivedHome] = useState(true)
 
-  if (!initialized.current) {
-    camera.position.set(...DEFAULT_CAM_POS)
-    initialized.current = true
-  }
-
-  if (focusPoint) {
-    const center = new THREE.Vector3(...CAR_CENTER)
-    const defect = new THREE.Vector3(...focusPoint)
-    const outward = defect.clone().sub(center)
-    if (outward.lengthSq() < 1e-6) outward.set(1, 0, 0)
-    outward.normalize()
-    targetPos.current
-      .copy(defect)
-      .addScaledVector(outward, OUTWARD_OFFSET)
-      .add(new THREE.Vector3(0, HOVER_HEIGHT, 0))
-    targetLookAt.current.copy(defect)
-  } else {
-    targetPos.current.set(...DEFAULT_CAM_POS)
-    targetLookAt.current.set(...CAR_CENTER)
-  }
+  const focusKey = focusPoint ? focusPoint.join(',') : null
+  useEffect(() => {
+    if (focusKey) setArrivedHome(false)
+  }, [focusKey])
 
   useFrame((_, delta) => {
+    if (focusPoint) {
+      const center = new THREE.Vector3(...CAR_CENTER)
+      const defect = new THREE.Vector3(...focusPoint)
+      const outward = defect.clone().sub(center)
+      if (outward.lengthSq() < 1e-6) outward.set(1, 0, 0)
+      outward.normalize()
+      targetPos.current
+        .copy(defect)
+        .addScaledVector(outward, OUTWARD_OFFSET)
+        .add(new THREE.Vector3(0, HOVER_HEIGHT, 0))
+      targetLookAt.current.copy(defect)
+    } else if (!arrivedHome) {
+      targetPos.current.set(...DEFAULT_CAM_POS)
+      targetLookAt.current.set(...CAR_CENTER)
+      if (camera.position.distanceTo(targetPos.current) < ARRIVED_EPSILON) {
+        setArrivedHome(true)
+      }
+    } else {
+      return // idle and home - OrbitControls owns the camera, don't fight it
+    }
+
     const lerpFactor = 1 - Math.pow(0.001, delta)
     camera.position.lerp(targetPos.current, lerpFactor)
     currentLookAt.current.lerp(targetLookAt.current, lerpFactor)
     camera.lookAt(currentLookAt.current)
   })
 
+  if (!focusPoint && arrivedHome) {
+    return <OrbitControls target={CAR_CENTER} enablePan={false} minDistance={2.5} maxDistance={11} />
+  }
   return null
 }
 
-export const CarScene = forwardRef<CarSceneHandle, Props>(function CarScene(
-  { product, defects, selectedDefectId, onSelectDefect, onDeselect },
-  ref,
-) {
-  const stateRef = useRef<RootState | null>(null)
-  const carGroupRef = useRef<THREE.Group>(null)
-  const raycaster = useMemo(() => new THREE.Raycaster(), [])
-
-  useImperativeHandle(ref, () => ({
-    raycastFromClient(clientX, clientY) {
-      const state = stateRef.current
-      const group = carGroupRef.current
-      if (!state || !group) return null
-      const rect = state.gl.domElement.getBoundingClientRect()
-      const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1
-      const ndcY = -((clientY - rect.top) / rect.height) * 2 + 1
-      if (ndcX < -1 || ndcX > 1 || ndcY < -1 || ndcY > 1) return null
-      raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), state.camera)
-      const hits = raycaster.intersectObject(group, true)
-      if (hits.length === 0) return null
-      const p = hits[0].point
-      return [p.x, p.y, p.z]
-    },
-  }))
-
+export function CarScene({
+  product,
+  defects,
+  selectedDefectId,
+  onSelectDefect,
+  onDeselect,
+  onPlaceAt,
+}: Props) {
   const selectedDefect = defects.find((d) => d.id === selectedDefectId) ?? null
   const focusPoint: [number, number, number] | null = selectedDefect
     ? [selectedDefect.x, selectedDefect.y, selectedDefect.z]
     : null
 
+  function handleCarClick(e: ThreeEvent<MouseEvent>) {
+    e.stopPropagation()
+    onPlaceAt([e.point.x, e.point.y, e.point.z])
+  }
+
   return (
     <Canvas
       className="h-full w-full"
       camera={{ position: DEFAULT_CAM_POS, fov: 40 }}
-      onCreated={(state) => {
-        stateRef.current = state
-      }}
       onPointerMissed={onDeselect}
     >
       <color attach="background" args={['#050810']} />
@@ -198,7 +194,7 @@ export const CarScene = forwardRef<CarSceneHandle, Props>(function CarScene(
         infiniteGrid
       />
       <Sparkles count={40} scale={5} size={2} speed={0.3} color="#67e8f9" position={[2.1, 1, 0.95]} />
-      <group ref={carGroupRef}>
+      <group onClick={handleCarClick}>
         <CarModel />
       </group>
       {defects.map((d) => (
@@ -211,7 +207,7 @@ export const CarScene = forwardRef<CarSceneHandle, Props>(function CarScene(
         />
       ))}
       <Crosshair3D product={product} />
-      <CameraRig focusPoint={focusPoint} />
+      <CameraController focusPoint={focusPoint} />
     </Canvas>
   )
-})
+}

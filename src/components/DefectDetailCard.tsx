@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { resolveSuggestion, updateDefect } from '../lib/defects'
+import { resolveSuggestion, updateDefect, uploadDefectPhoto } from '../lib/defects'
 import type { Defect } from '../lib/types'
 import { DEFECT_LABELS } from '../lib/types'
 
@@ -12,6 +12,9 @@ interface Props {
 export function DefectDetailCard({ defect, onClose }: Props) {
   const [note, setNote] = useState(defect.note ?? '')
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function saveNote() {
     if (note === (defect.note ?? '')) return
@@ -25,6 +28,23 @@ export function DefectDetailCard({ defect, onClose }: Props) {
 
   async function toggleResolved() {
     await updateDefect({ id: defect.id, resolved: !defect.resolved })
+  }
+
+  async function handlePhotoSelected(file: File) {
+    setUploading(true)
+    try {
+      const photo_url = await uploadDefectPhoto(file)
+      await updateDefect({ id: defect.id, photo_url })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function handleCopyPhotoLink() {
+    if (!defect.photo_url) return
+    await navigator.clipboard.writeText(defect.photo_url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
   }
 
   return (
@@ -44,12 +64,42 @@ export function DefectDetailCard({ defect, onClose }: Props) {
         {new Date(defect.created_at).toLocaleString()} · {defect.source}
       </p>
 
-      {defect.photo_url && (
-        <img
-          src={defect.photo_url}
-          alt="Photo of the defect"
-          className="mt-3 h-32 w-full rounded-lg border border-white/10 object-cover"
-        />
+      {defect.photo_url ? (
+        <div className="mt-3">
+          <img
+            src={defect.photo_url}
+            alt="Photo of the defect"
+            className="h-32 w-full rounded-lg border border-white/10 object-cover"
+          />
+          <button
+            type="button"
+            onClick={handleCopyPhotoLink}
+            className="mt-1 w-full rounded bg-white/5 px-2 py-1 text-[10px] text-white/60 hover:bg-white/10"
+          >
+            {copied ? 'Copied' : 'Copy photo link (to give the agent)'}
+          </button>
+        </div>
+      ) : (
+        <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) handlePhotoSelected(file)
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="mt-3 w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white disabled:opacity-50"
+          >
+            {uploading ? 'Uploading…' : 'Attach Photo'}
+          </button>
+        </>
       )}
 
       {defect.suggestion_status === 'pending' && (

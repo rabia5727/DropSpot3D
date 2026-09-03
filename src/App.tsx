@@ -1,25 +1,21 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { CarScene, type CarSceneHandle } from './components/CarScene'
+import { CarScene } from './components/CarScene'
 import { DefectCloseup } from './components/DefectCloseup'
 import { DefectDetailCard } from './components/DefectDetailCard'
-import { DefectPalette } from './components/DefectPalette'
 import { DefectTable } from './components/DefectTable'
-import { PhotoUploadWidget } from './components/PhotoUploadWidget'
 import { ProductSwitcher } from './components/ProductSwitcher'
 import { QAReportPanel } from './components/QAReportPanel'
 import { SyncLog } from './components/SyncLog'
 import { useDefects } from './hooks/useDefects'
 import { flagForRework, listProducts, placeDefect } from './lib/defects'
-import type { DefectType, Product } from './lib/types'
-import { DEFAULT_SEVERITY } from './lib/types'
+import type { Product } from './lib/types'
 import { ToolRegistrar } from './webmcp/ToolRegistrar'
 
 function App() {
   const [products, setProducts] = useState<Product[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedDefectId, setSelectedDefectId] = useState<string | null>(null)
-  const carSceneRef = useRef<CarSceneHandle>(null)
 
   const { defects, refetch } = useDefects(selectedId)
   const product = products.find((p) => p.id === selectedId) ?? null
@@ -47,22 +43,24 @@ function App() {
     return () => window.removeEventListener('agent-defect-placed', handler)
   }, [selectedId])
 
-  async function handleDropAt(type: DefectType, point: { x: number; y: number }) {
+  // Click directly on the car where the problem is - no type to pick first.
+  // Lands as "unknown" so the just-opened detail card is where you add a note
+  // and/or a photo; ask the agent to classify it from there if you're not sure
+  // what it is.
+  async function handlePlaceAt(point: [number, number, number]) {
     if (!product) return
-    const hit = carSceneRef.current?.raycastFromClient(point.x, point.y)
-    if (!hit) return // dropped outside the car model
-
-    const [x, y, z] = hit
-    await placeDefect({
+    const [x, y, z] = point
+    const defect = await placeDefect({
       product_id: product.id,
       x,
       y,
       z,
-      defect_type: type,
-      severity: DEFAULT_SEVERITY[type],
+      defect_type: 'unknown',
+      severity: null,
       source: 'human',
     })
     refetch()
+    setSelectedDefectId(defect.id)
   }
 
   async function handleFlagRework() {
@@ -100,20 +98,15 @@ function App() {
       {!product ? (
         <p className="text-white/50">Loading products…</p>
       ) : (
-        <div className="grid grid-cols-[200px_minmax(420px,1fr)_260px] gap-4">
-          <div className="flex flex-col gap-4">
-            <DefectPalette onDropAt={handleDropAt} />
-            <PhotoUploadWidget />
-          </div>
-
+        <div className="grid grid-cols-[minmax(420px,1fr)_260px] gap-4">
           <div className="relative h-[480px] w-full max-w-3xl overflow-hidden rounded-2xl border border-cyan-500/20 bg-[#050810] shadow-[0_0_40px_rgba(34,211,238,0.08)]">
             <CarScene
-              ref={carSceneRef}
               product={product}
               defects={defects}
               selectedDefectId={selectedDefectId}
               onSelectDefect={(d) => setSelectedDefectId(d.id)}
               onDeselect={() => setSelectedDefectId(null)}
+              onPlaceAt={handlePlaceAt}
             />
             <AnimatePresence>
               {selectedDefect && (

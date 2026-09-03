@@ -109,6 +109,7 @@ export interface UpdateDefectInput {
   note?: string | null
   resolved?: boolean
   defect_type?: DefectType
+  photo_url?: string | null
 }
 
 export async function updateDefect(input: UpdateDefectInput): Promise<Defect> {
@@ -123,7 +124,9 @@ export async function updateDefect(input: UpdateDefectInput): Promise<Defect> {
   const message =
     patch.resolved !== undefined
       ? `Defect marked ${patch.resolved ? 'resolved' : 'reopened'} in database`
-      : 'Defect record updated in database'
+      : patch.photo_url !== undefined
+        ? 'Photo attached to defect, saved to database'
+        : 'Defect record updated in database'
   notifyChanged(message)
   return data as Defect
 }

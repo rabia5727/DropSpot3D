@@ -131,6 +131,7 @@ export function ToolRegistrar() {
         severity: { type: 'string', enum: ['low', 'med', 'high'] },
         note: { type: 'string' },
         resolved: { type: 'boolean' },
+        photo_url: { type: 'string', description: 'Attach a real photo of the defect, if one was given to you.' },
       },
       required: ['defect_id'],
     } as const,
@@ -140,6 +141,7 @@ export function ToolRegistrar() {
         severity: input.severity as never,
         note: input.note,
         resolved: input.resolved,
+        photo_url: input.photo_url,
       })
       return { content: [{ type: 'text', text: JSON.stringify(defect) }] }
     },

@@ -1,17 +1,17 @@
 # DropSpot3D
 
-A holographic 3D QA inspection board for automotive lines. Instead of filling out a defect form, inspectors drag a colored tag directly onto the exact spot on a live 3D car model. An AI agent can perform the identical action — via the same [WebMCP](https://webmachinelearning.github.io/webmcp/) tools, calling the same functions the UI calls — from a written inspection note, animated as a crosshair sweeping to the target in 3D space before the tag drops. The car itself, glowing with color-coded defect markers, *is* the QA display — not a text report.
+A holographic 3D QA inspection board for automotive lines. Instead of filling out a defect form, inspectors click directly on the exact spot on a live 3D car model. An AI agent can perform the identical action — via the same [WebMCP](https://webmachinelearning.github.io/webmcp/) tools, calling the same functions the UI calls — from a written inspection note or a real photo, animated as a crosshair sweeping to the target in 3D space before the tag drops. The car itself, glowing with color-coded defect markers, *is* the QA display — not a text report.
 
 Built for the [OpenAI WebMCP Challenge](https://webmcp.devpost.com/).
 
 ## How it works
 
-- **Human path:** drag a defect tag from the sidebar palette onto the 3D car. A raycast finds the exact 3D surface point under the cursor and a glowing marker snaps into place there.
-- **Agent path:** an AI agent connected via a WebMCP-aware client (e.g. the [Rook](https://docs.mcp-b.ai/) browser extension, or a browser with native WebMCP support) calls the exact same `log_defect` function registered on this page — no separate agent backend, no API key required by this app. The agent can reason in named car zones (`front_bumper`, `left_front_door`, `right_headlight`, ...) instead of guessing raw 3D coordinates.
-- **Unknown defects:** if an inspector can't classify what they're seeing, they drop an "Unknown / Flag" tag instead. The agent can then call `suggest_classification` to propose a type/severity, which a human must explicitly accept or reject before the record actually changes.
-- **The hologram *is* the report:** "Scan / Report" doesn't open a blocking modal - it's a compact HUD readout (pass/fail + counts) that sits alongside the still-visible glowing 3D defect map, which is the primary display.
+- **Human path:** click directly on the 3D car where the problem is — no type to pick first, no menu. It lands as "Unknown" and opens straight into a card where you add a note and/or attach a real photo.
+- **Agent path:** an AI agent connected via a WebMCP-aware client (e.g. the [Rook](https://docs.mcp-b.ai/) browser extension, or a browser with native WebMCP support) calls the exact same `log_defect` function registered on this page — no separate agent backend, no API key required by this app. The agent can reason in named car zones (`front_bumper`, `left_front_door`, `right_headlight`, ...) instead of guessing raw 3D coordinates, and can attach a real photo it was shown via `photo_url`.
+- **Unclassified defects:** the agent can call `suggest_classification` to propose a type/severity for anything logged as "Unknown," which a human must explicitly accept or reject before the record actually changes.
+- **The hologram *is* the report:** the "Live Scan" panel isn't a blocking modal - it's a compact, always-live HUD readout (pass/fail + counts) that sits alongside the still-visible glowing 3D defect map, which is the primary display.
 
-Every WebMCP tool is a thin wrapper around [`src/lib/defects.ts`](src/lib/defects.ts) — the same file the drag-and-drop UI calls. There is no separate agent code path.
+Every WebMCP tool is a thin wrapper around [`src/lib/defects.ts`](src/lib/defects.ts) — the same file the click-to-place UI calls. There is no separate agent code path.
 
 ## WebMCP tools registered
 
@@ -46,7 +46,7 @@ The database schema lives in [`supabase/migrations/`](supabase/migrations/) (run
 
 ## Stack
 
-Vite + React + TypeScript, Three.js + React Three Fiber (the 3D holographic car), Framer Motion (palette drag/snap/pulse), Supabase (Postgres + RLS + Storage for defect photos), `@mcp-b/global` + `@mcp-b/react-webmcp` for WebMCP tool registration.
+Vite + React + TypeScript, Three.js + React Three Fiber (the 3D holographic car, free orbit + scripted zoom-to-defect camera), Framer Motion (card/pin animation), Supabase (Postgres + RLS + Storage for defect photos), `@mcp-b/global` + `@mcp-b/react-webmcp` for WebMCP tool registration.
 
 ## Credits
 
