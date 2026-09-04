@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Demo video recordings/archives - not source, too large for git (GitHub's
+# 100MB per-file limit), and belong on YouTube per the submission, not here.
+demo vide/
+demo vide.tar
+demo vide.zip
+*.mp4
+*.mov
+*.mkv
