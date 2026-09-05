@@ -117,23 +117,28 @@ export const PALETTE_COLORS: Record<DefectType, string> = {
  * 0..diagram_height y, 0..diagram_depth z) - given to the agent in the
  * log_defect tool description so it can reason in named zones instead of
  * guessing raw 3D coordinates.
+ *
+ * Calibrated against the real loaded model's measured bounding box (after
+ * excluding its baked shadow-plane mesh, see CarScene.tsx): x stays 0..4.2
+ * by construction, but real height/width came out to ~1.19 / ~1.78 - these
+ * y/z values are scaled from an earlier, taller/wider assumption to match.
  */
 export const CAR_ZONES: Record<string, [number, number, number]> = {
-  front_bumper: [4.12, 0.35, 0.95],
-  hood: [3.6, 0.5, 0.95],
-  windshield: [2.6, 0.95, 0.95],
-  roof: [1.6, 1.22, 0.95],
-  rear_windshield: [0.85, 0.9, 0.95],
-  trunk: [0.4, 0.5, 0.95],
-  rear_bumper: [0.12, 0.3, 0.95],
-  left_front_door: [2.4, 0.5, 1.85],
-  left_rear_door: [1.35, 0.5, 1.85],
-  right_front_door: [2.4, 0.5, 0.05],
-  right_rear_door: [1.35, 0.5, 0.05],
-  left_front_fender: [3.2, 0.42, 1.75],
-  right_front_fender: [3.2, 0.42, 0.15],
-  left_headlight: [3.98, 0.48, 1.55],
-  right_headlight: [3.98, 0.48, 0.35],
-  left_mirror: [2.7, 0.85, 1.9],
-  right_mirror: [2.7, 0.85, 0.0],
+  front_bumper: [4.12, 0.3, 0.89],
+  hood: [3.6, 0.43, 0.89],
+  windshield: [2.6, 0.82, 0.89],
+  roof: [1.6, 1.05, 0.89],
+  rear_windshield: [0.85, 0.77, 0.89],
+  trunk: [0.4, 0.43, 0.89],
+  rear_bumper: [0.12, 0.26, 0.89],
+  left_front_door: [2.4, 0.43, 1.73],
+  left_rear_door: [1.35, 0.43, 1.73],
+  right_front_door: [2.4, 0.43, 0.05],
+  right_rear_door: [1.35, 0.43, 0.05],
+  left_front_fender: [3.2, 0.36, 1.64],
+  right_front_fender: [3.2, 0.36, 0.14],
+  left_headlight: [3.98, 0.41, 1.45],
+  right_headlight: [3.98, 0.41, 0.33],
+  left_mirror: [2.7, 0.73, 1.78],
+  right_mirror: [2.7, 0.73, 0.0],
 }

@@ -38,6 +38,20 @@ function useNormalizedCarScene() {
   return useMemo(() => {
     const source = gltf.scene.clone(true)
 
+    // The source file includes a large baked shadow/ground-contact mesh
+    // ("Object_241": roughly -2.4..2.6 in both X and Z) that dwarfs every
+    // actual car-body part (which consistently span -1.05..1.05 x -2.49..2.49
+    // - real sedan proportions). Left in, it dominates the bounding-box math
+    // below and corrupts the whole coordinate system CAR_ZONES is calibrated
+    // against (measured: car width came out ~3.8 instead of the real ~1.8).
+    // Dropping it fixes both placement accuracy and avoids rendering a flat
+    // holographic slab under the car.
+    const outliers: THREE.Object3D[] = []
+    source.traverse((obj) => {
+      if (obj.name === 'Object_241') outliers.push(obj)
+    })
+    outliers.forEach((obj) => obj.parent?.remove(obj))
+
     // Give real materials a translucent holographic tint while keeping their
     // own color/detail visible - keeps the "hologram" identity without
     // hiding the realistic geometry we specifically swapped in for.
@@ -87,7 +101,7 @@ export function CarModel() {
 
 useGLTF.preload(MODEL_PATH)
 
-export const CAR_CENTER: [number, number, number] = [2.05, 0.55, 0.95]
+export const CAR_CENTER: [number, number, number] = [2.1, 0.5, 0.89]
 const DEFAULT_CAM_POS: [number, number, number] = [5.5, 3.2, 5.5]
 const OUTWARD_OFFSET = 0.9
 const HOVER_HEIGHT = 0.45
